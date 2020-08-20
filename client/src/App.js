@@ -1,11 +1,16 @@
 import React, { Component } from "react";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
-import jwt_decode from "jwt-decode";
+// import jwt_decode from "jwt-decode"; - Remove jwt decode
 import setAuthToken from "./utils/setAuthToken";
 
 import { setCurrentUser, logoutUser } from "./actions/authActions";
 import { Provider } from "react-redux";
 import store from "./store";
+
+import { secretOrKey } from "./config/keys"; // import secretOrKey
+import jsonwebtoken from "jsonwebtoken"; // install and import jwt
+
+
 
 import Navbar from "./components/layout/Navbar";
 import Landing from "./components/layout/Landing";
@@ -16,25 +21,25 @@ import Dashboard from "./components/dashboard/Dashboard";
 
 import "./App.css";
 
-// Check for token to keep user logged in
 if (localStorage.jwtToken) {
-  // Set auth token header auth
-  const token = localStorage.jwtToken;
-  setAuthToken(token);
-  // Decode token and get user info and exp
-  const decoded = jwt_decode(token);
-  // Set user and isAuthenticated
-  store.dispatch(setCurrentUser(decoded));
-  // Check for expired token
-  const currentTime = Date.now() / 1000; // to get in milliseconds
-  if (decoded.exp < currentTime) {
-    // Logout user
-    store.dispatch(logoutUser());
+	const token = localStorage.jwtToken; 
+	jsonwebtoken.verify(token.slice(7), secretOrKey, function (err, decoded) { // check if it is a valid jwt that server has sent
+		if (err) {
+			localStorage.removeItem("jwtToken"); // remove if not 
+		} else {
+			setAuthToken(token); 
+			store.dispatch(setCurrentUser(decoded)); // set the auth state with a confirmed jwt 
 
-    // Redirect to login
-    window.location.href = "./login";
-  }
+			const currentTime = Date.now() / 1000;
+			if (decoded.exp < currentTime) {
+				store.dispatch(logoutUser());
+
+				window.location.href = "./login";
+			}
+		}
+	});
 }
+
 class App extends Component {
   render() {
     return (
